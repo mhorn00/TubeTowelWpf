@@ -10,7 +10,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Xml;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 
@@ -19,13 +18,9 @@ namespace TubeTowelAppWpf {
     /*
      * TODO: 
      * - Make About and Help pages
-     * - Add any options that are needed to menu
      * - Close out button function
-     * - Handle Json Errors
-     * 
      */
     public partial class MainWindow : Window {
-
         private static readonly SolidColorBrush ErrorBrush = new SolidColorBrush(Colors.Red);
         private static readonly SolidColorBrush StatusBrush = new SolidColorBrush(Colors.Black);
         private const string dbSchema = @"{
@@ -42,7 +37,6 @@ namespace TubeTowelAppWpf {
                 'required': ['MemberNum', 'CheckoutCount', 'ListID', 'IsCheckedOut', 'LastModify']
               }
             }";
-
         internal Dictionary<string, MemberInfo> checkList;
         internal ObservableCollection<MemberInfo> ListViewItems {
             get {
@@ -55,6 +49,7 @@ namespace TubeTowelAppWpf {
 
         public MainWindow() {
             InitializeComponent();
+            log("\nTube Towel Check In/Out Tool Started", LogLevel.Info);
             DataContext = this;
             if (!File.Exists(logFile) || (File.Exists("db.json") && new FileInfo("db.json").Length == 0)) {
                 File.Create(logFile).Close();
@@ -70,15 +65,46 @@ namespace TubeTowelAppWpf {
                     jr.Schema = JSchema.Parse(dbSchema);
                     jr.ValidationEventHandler += DbValidationError;
                     JsonSerializer js = new JsonSerializer();
-                    Dictionary<string, MemberInfo> jsonDict = js.Deserialize<Dictionary<string, MemberInfo>>(jr);
+                    Dictionary<string, MemberInfo> jsonDict = null;
+                    try {
+                        jsonDict = js.Deserialize<Dictionary<string, MemberInfo>>(jr);
+                    } catch (Exception ex) {
+                        statusLbl.Foreground = ErrorBrush;
+                        statusLbl.Content = "Database JSON deserialization failed!";
+                        log("JSON Deserialization failed!", LogLevel.Fatal);
+                        log(ex.Message, LogLevel.Fatal);
+                        log(ex.StackTrace ?? "No StackTrace avalible", LogLevel.Fatal);
+                        bool? result = new ConfirmDialog("Failed to load the database.", "Would you like to reset the database?", true).ShowDialog();
+                        if (result == true) {
+                            jsonDict = new Dictionary<string, MemberInfo>();
+                            File.Create("db.json").Close();
+                            statusLbl.Foreground = StatusBrush;
+                            statusLbl.Content = "Database reset after deserialization error";
+                        } else {
+                            log("User denied database reset, fix above error or delete database file and try again.", LogLevel.Fatal);
+                            Environment.Exit(-1);
+                        }
+                    }
                     if (jsonDict != null && jsonDict.GetType() == typeof(Dictionary<string, MemberInfo>)) {
                         checkList = jsonDict;
-                        listviewID = checkList.Values.Max(m => m.ListID);
+                        if (checkList.Count > 0) {
+                            listviewID = checkList.Values.Max(m => m.ListID);
+                        }
                         memberListView.ItemsSource = ListViewItems;
                     } else {
-                        checkList = new Dictionary<string, MemberInfo>();
-                        log("JSON Deserialization failed!", LogLevel.Error);
-                        //TODO: Handle json deserilize of dict failing
+                        statusLbl.Foreground = ErrorBrush;
+                        statusLbl.Content = "Database JSON deserialization failed!";
+                        log("JSON Deserialization failed!", LogLevel.Fatal);
+                        bool? result = new ConfirmDialog("Failed to load the database.", "Would you like to reset the database?", true).ShowDialog();
+                        if (result == true) {
+                            checkList = new Dictionary<string, MemberInfo>();
+                            File.Create("db.json").Close();
+                            statusLbl.Foreground = StatusBrush;
+                            statusLbl.Content = "Database reset after deserialization error";
+                        } else {
+                            log("User denied database reset, delete database file and try again.", LogLevel.Fatal);
+                            Environment.Exit(-1);
+                        }
                     }
                 }
             }
@@ -86,12 +112,27 @@ namespace TubeTowelAppWpf {
 
         private void DbValidationError(object sender, SchemaValidationEventArgs e) {
             statusLbl.Foreground = ErrorBrush;
-            statusLbl.Content = "DB validation error!";
+            statusLbl.Content = "Database validation error!";
             SystemSounds.Beep.Play();
-            log("JSON DB Validation Error!", LogLevel.Error);
-            log(e.Message, LogLevel.Error);
+            log("JSON DB Validation Error!", LogLevel.Fatal);
+            log(e.Message, LogLevel.Fatal);
+            bool? result = new ConfirmDialog("Failed to load the database.", "Would you like to reset the database?", true).ShowDialog();
+            if (result == true) {
+                checkList = new Dictionary<string, MemberInfo>();
+                File.Create("db.json").Close();
+                statusLbl.Foreground = StatusBrush;
+                statusLbl.Content = "Database reset after validation error";
+            } else {
+                log("User denied database reset, fix above error to correct database or delete database and try again.", LogLevel.Fatal);
+                Environment.Exit(-1);
+            }
         }
 
+        private void mainWindow_PreviewKeyDown(object sender, KeyEventArgs e) {
+            if (!e.Handled && !memberSearchTxtBx.IsFocused) {
+                memberTxtBx.Focus();
+            }
+        }
         private void memberTxtBx_PreviewTextInput(object sender, TextCompositionEventArgs e) {
             if (!Regex.IsMatch(e.Text, @"^[0-9]{1,7}$")) e.Handled = true;
         }
@@ -99,24 +140,20 @@ namespace TubeTowelAppWpf {
             if (!Regex.IsMatch(e.Text, @"^[0-9]{1,7}$")) e.Handled = true;
         }
         private void memberTxtBx_TextChanged(object sender, TextChangedEventArgs e) {
-            if (sender == null || sender.GetType() != typeof(TextBox)) return;
-            TextBox txtBx = (TextBox)sender;
-            txtBx.Text = txtBx.Text.Trim();
-            if (txtBx.Text.Length > 7) {
-                txtBx.Text = txtBx.Text.Substring(0, 7);
-                txtBx.CaretIndex = txtBx.Text.Length;
+            memberTxtBx.Text = memberTxtBx.Text.Trim();
+            if (memberTxtBx.Text.Length > 7) {
+                memberTxtBx.Text = memberTxtBx.Text.Substring(0, 7);
+                memberTxtBx.CaretIndex = memberTxtBx.Text.Length;
             }
         }
         private void memberSearchTxtBx_TextChanged(object sender, TextChangedEventArgs e) {
-            if (sender == null || sender.GetType() != typeof(TextBox)) return;
-            TextBox txtBx = (TextBox)sender;
-            txtBx.Text = txtBx.Text.Trim();
-            if (txtBx.Text.Length > 7) {
-                txtBx.Text = txtBx.Text.Substring(0, 7);
-                txtBx.CaretIndex = txtBx.Text.Length;
+            memberSearchTxtBx.Text = memberSearchTxtBx.Text.Trim();
+            if (memberSearchTxtBx.Text.Length > 7) {
+                memberSearchTxtBx.Text = memberSearchTxtBx.Text.Substring(0, 7);
+                memberSearchTxtBx.CaretIndex = memberSearchTxtBx.Text.Length;
             }
-            if (Regex.IsMatch(txtBx.Text, @"^[0-9]{1,7}$")) {
-                memberListView.ItemsSource = new ObservableCollection<MemberInfo>(ListViewItems.Where(m => m.MemberNum.StartsWith(txtBx.Text)));
+            if (Regex.IsMatch(memberSearchTxtBx.Text, @"^[0-9]{1,7}$")) {
+                memberListView.ItemsSource = new ObservableCollection<MemberInfo>(ListViewItems.Where(m => m.MemberNum.StartsWith(memberSearchTxtBx.Text)));
             } else {
                 memberListView.ItemsSource = ListViewItems;
             }
@@ -157,6 +194,7 @@ namespace TubeTowelAppWpf {
                 log("First time checked in member " + memNum, LogLevel.Info);
             }
             memberListView.ItemsSource = ListViewItems;
+            memberTxtBx.Focus();
         }
         private void updateCheckList() {
             memberTxtBx.Text = memberTxtBx.Text.Trim();
@@ -204,12 +242,15 @@ namespace TubeTowelAppWpf {
             }
         }
         private void closeOutBtn_Click(object sender, RoutedEventArgs e) {
-            bool? result = new CloseOutDialog().ShowDialog();
+            bool? result = new ConfirmDialog("Are you sure you want to close out?", "This can't be undone.",false).ShowDialog();
             if (result == true) {
                 memberTxtBx.IsEnabled = false;
                 submitBtn.IsEnabled = false;
                 memberSearchTxtBx.IsEnabled = false;
                 closeOutBtn.IsEnabled = false;
+                closeOutMenuItem.IsEnabled = false;
+                checkInAllMenuItem.IsEnabled = false;
+                resetDbMenuItem.IsEnabled = false;
             }
         }
         private void aboutMenuItem_Click(object sender, RoutedEventArgs e) {
@@ -217,6 +258,53 @@ namespace TubeTowelAppWpf {
                 aboutWindow = new AboutWindow();
                 aboutWindow.Show();
                 aboutWindow.Focus();
+            }
+        }
+        private void closeOutMenuItem_Click(object sender, RoutedEventArgs e) {
+            closeOutBtn_Click(sender, e);
+        }
+        private void checkInAllMenuItem_Click(object sender, RoutedEventArgs e) {
+            bool? result = new ConfirmDialog("Are you sure you want to check in all memebers?", "This can't be undone.",false).ShowDialog();
+            if (result == true) {
+                foreach (MemberInfo m in checkList.Values) {
+                    if (m.IsCheckedOut) {
+                        m.IsCheckedOut = false;
+                        m.LastModify = DateTime.Now;
+                        m.ListID = ++listviewID;
+                    }
+                }
+                memberListView.ItemsSource = ListViewItems;
+                statusLbl.Foreground = StatusBrush;
+                statusLbl.Content = "All members checked in.";
+                try {
+                    File.WriteAllText("db.json", JsonConvert.SerializeObject(checkList, Newtonsoft.Json.Formatting.Indented));
+                } catch (Exception ex) {
+                    statusLbl.Foreground = ErrorBrush;
+                    statusLbl.Content = "Failed to write to DB!";
+                    SystemSounds.Beep.Play();
+                    log("Failed to write to DB", LogLevel.Error);
+                    log(ex.Message, LogLevel.Error);
+                    log(ex.StackTrace ?? "No StackTrace avalible", LogLevel.Error);
+                }
+            } 
+        }
+        private void resetDbMenuItem_Click(object sender, RoutedEventArgs e) {
+            bool? result = new ConfirmDialog("Are you sure you want to reset today's database?", "This will remove all checked in and out members.", false).ShowDialog();
+            if (result == true) {
+                checkList.Clear();
+                memberListView.ItemsSource = ListViewItems;
+                statusLbl.Foreground = StatusBrush;
+                statusLbl.Content = "Database cleared.";
+                try {
+                    File.WriteAllText("db.json", JsonConvert.SerializeObject(checkList, Newtonsoft.Json.Formatting.Indented));
+                } catch (Exception ex) {
+                    statusLbl.Foreground = ErrorBrush;
+                    statusLbl.Content = "Failed to write to DB!";
+                    SystemSounds.Beep.Play();
+                    log("Failed to write to DB", LogLevel.Error);
+                    log(ex.Message, LogLevel.Error);
+                    log(ex.StackTrace ?? "No StackTrace avalible", LogLevel.Error);
+                }
             }
         }
         private void log(string msg, LogLevel lvl) {
@@ -231,7 +319,11 @@ namespace TubeTowelAppWpf {
                             default: loglvl = "INFO"; break;
 
                         }
-                        sw.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] [{loglvl}] {msg}");
+                        if (msg.StartsWith("\n")) {
+                            sw.WriteLine($"\n[{DateTime.Now.ToString("HH:mm:ss")}] [{loglvl}] {msg.Remove(0,1)}");
+                        } else {
+                            sw.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss")}] [{loglvl}] {msg}");
+                        }
                     }
                 }
             } catch (IOException e) {
@@ -325,6 +417,5 @@ namespace TubeTowelAppWpf {
             Error = 2,
             Fatal = 3,
         }
-
     }
 }
