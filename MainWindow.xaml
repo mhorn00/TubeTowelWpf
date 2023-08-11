@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:TubeTowelAppWpf"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MainWindow}"
-        Title="Tube n' Towel Check In/Out Tool" Height="850" Width="800" ResizeMode="NoResize" Icon="/icon.ico" FontSize="18" PreviewKeyDown="mainWindow_PreviewKeyDown">
+        Title="Tube n' Towel Check In/Out Tool" Height="850" Width="800" ResizeMode="NoResize" Icon="/icon.ico" FontSize="18" PreviewKeyDown="mainWindow_PreviewKeyDown" Closing="mainWindow_Closing">
     <Window.Resources>
         <local:IsCheckedOutConverter x:Key="IsCheckedOutConverter"/>
         <local:WrappedTextBox x:Key="WrappedTextBox"/>
@@ -39,7 +39,7 @@
             <MenuItem Header="_Help" IsTabStop="False">
                 <MenuItem x:Name="aboutMenuItem" Header="About" IsTabStop="False" Click="aboutMenuItem_Click"/>
                 <Separator/>
-                <MenuItem Header="Help" IsTabStop="False"/>
+                <MenuItem x:Name="helpMenuItem" Header="Help" IsTabStop="False" Click="helpMenuItem_Click"/>
             </MenuItem>
         </Menu>
         <Label Grid.Row="1" Grid.Column="1" Content="Tube n' Towel" VerticalAlignment="Center" FontSize="80" FontFamily="Segoe UI Semilight" Margin="20,0,0,0" Padding="5,0,5,0"/>
@@ -68,7 +68,7 @@
             <local:WrappedTextBox x:Name="memberSearchTxtBx" Grid.Column="1" TextWrapping="Wrap" Width="220" FontSize="20" VerticalAlignment="Center" VerticalContentAlignment="Center" Padding="0,4,0,4" IsTabStop="False" PreviewTextInput="memberSeachTxtBx_PreviewTextInput" TextChanged="memberSearchTxtBx_TextChanged"/>
             <Button x:Name="closeOutBtn" Grid.Column="2" Content="Close Out" VerticalAlignment="Center" FontSize="20" HorizontalAlignment="Right" IsTabStop="False" Padding="10,4,10,4" Click="closeOutBtn_Click"/>
         </Grid>
-        <ListView x:Name="memberListView" Grid.Row="8" Grid.Column="1" FontSize="18" ItemsSource="{Binding listViewItems}" Margin="0,3,0,0">
+        <ListView x:Name="memberListView" Grid.Row="8" Grid.Column="1" FontSize="18" Margin="0,3,0,0">
             <ListView.ItemContainerStyle>
                 <Style TargetType="{x:Type ListViewItem}">
                     <Setter Property="IsTabStop" Value="False"/>
@@ -89,7 +89,7 @@
                     <GridViewColumn Header="Action" Width="107">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding IsCheckedOut, Converter={StaticResource IsCheckedOutConverter}}" Tag="{Binding MemberNum}" Padding="5,2,5,2" Width="95" Click="memberListViewBtn_Click" IsEnabled="{Binding IsEnabled, ElementName=closeOutBtn}" />
+                                <Button Content="{Binding IsCheckedOut, Converter={StaticResource IsCheckedOutConverter}}" Tag="{Binding MemberNum}" Padding="5,2,5,2" Width="95" Click="memberListViewBtn_Click" IsEnabled="{Binding IsEnabled, ElementName=memberTxtBx}" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>

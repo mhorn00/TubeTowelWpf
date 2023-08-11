@@ -18,7 +18,7 @@ namespace TubeTowelAppWpf {
     /*
      * TODO: 
      * - Make About and Help pages
-     * - Close out button function
+     * - finish Close out button function
      */
     public partial class MainWindow : Window {
         private static readonly SolidColorBrush ErrorBrush = new SolidColorBrush(Colors.Red);
@@ -46,6 +46,9 @@ namespace TubeTowelAppWpf {
         private int listviewID = 0;
         private readonly String logFile = "log" + DateTime.Now.ToString("MM-dd-yyyy") + ".txt";
         internal static AboutWindow aboutWindow { get; set; }
+        internal static HelpWindow helpWindow { get; set; }
+
+        internal static bool closedOut = false;
 
         public MainWindow() {
             InitializeComponent();
@@ -127,7 +130,14 @@ namespace TubeTowelAppWpf {
                 Environment.Exit(-1);
             }
         }
-
+        private void mainWindow_Closing(object sender, CancelEventArgs e) {
+            bool? result = new ConfirmDialog("Are you sure you want to exit?","Today's database will be saved.", false).ShowDialog();
+            if (result == true) {
+                e.Cancel = false;
+            } else {
+                e.Cancel = true;
+            }
+        }
         private void mainWindow_PreviewKeyDown(object sender, KeyEventArgs e) {
             if (!e.Handled && !memberSearchTxtBx.IsFocused) {
                 memberTxtBx.Focus();
@@ -244,6 +254,7 @@ namespace TubeTowelAppWpf {
         private void closeOutBtn_Click(object sender, RoutedEventArgs e) {
             bool? result = new ConfirmDialog("Are you sure you want to close out?", "This can't be undone.",false).ShowDialog();
             if (result == true) {
+                closedOut = true;
                 memberTxtBx.IsEnabled = false;
                 submitBtn.IsEnabled = false;
                 memberSearchTxtBx.IsEnabled = false;
@@ -251,6 +262,19 @@ namespace TubeTowelAppWpf {
                 closeOutMenuItem.IsEnabled = false;
                 checkInAllMenuItem.IsEnabled = false;
                 resetDbMenuItem.IsEnabled = false;
+                log("Members who did not check in are:",LogLevel.Info);
+                foreach (MemberInfo m in checkList.Values) {
+                    if (m.IsCheckedOut) {
+                        m.ListID = listviewID++;
+                        log($"Member {m.MemberNum}: last checked out at {m.TimeModified} and checked out {m.CheckoutCount}" + (m.CheckoutCount==1?" time.":" times."),LogLevel.Info);
+                    }
+                }
+                log("Finished closeing out.", LogLevel.Info);
+                memberListView.ItemsSource = ListViewItems;
+                if (!Directory.Exists("dbs")) Directory.CreateDirectory("dbs");
+                if (!Directory.Exists("logs")) Directory.CreateDirectory("logs");
+                File.Move("db.json", $"dbs\\db-{DateTime.Now.ToString("MM-dd-yyyy_HH.mm.ss")}.json");
+                File.Move(logFile, $"logs\\log-{DateTime.Now.ToString("MM-dd-yyyy_HH.mm.ss")}.txt");
             }
         }
         private void aboutMenuItem_Click(object sender, RoutedEventArgs e) {
@@ -258,6 +282,13 @@ namespace TubeTowelAppWpf {
                 aboutWindow = new AboutWindow();
                 aboutWindow.Show();
                 aboutWindow.Focus();
+            }
+        }
+        private void helpMenuItem_Click(object sender, RoutedEventArgs e) {
+            if (helpWindow == null) {
+                helpWindow = new HelpWindow();
+                helpWindow.Show();
+                helpWindow.Focus();
             }
         }
         private void closeOutMenuItem_Click(object sender, RoutedEventArgs e) {
@@ -394,7 +425,12 @@ namespace TubeTowelAppWpf {
             [JsonIgnore]
             public string TimeModified { get { return LastModify.ToString("hh:mm:ss tt"); } }
             [JsonIgnore]
-            public string Status { get { return IsCheckedOut ? "Checked Out. Member has checked out " + CheckoutCount + (CheckoutCount == 1 ? " time." : " times.") : "Checked In."; } }
+            public string Status { 
+                get {
+                    if (closedOut) return IsCheckedOut ? "Member still checked out after close." : "Checked In.";
+                    return IsCheckedOut ? "Checked Out. Member has checked out " + CheckoutCount + (CheckoutCount == 1 ? " time." : " times.") : "Checked In."; 
+                } 
+            }
 
             public event PropertyChangedEventHandler PropertyChanged;
 
