@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TubeTowelAppWpf"
         mc:Ignorable="d"
-        Title="AboutWindow" Height="450" Width="800" Closed="aboutWindow_Closed">
+        Title="About" Height="450" Width="800" Closed="aboutWindow_Closed" ShowInTaskbar="False" ResizeMode="NoResize" Icon="/icon.ico">
     <Grid>
         
     </Grid>

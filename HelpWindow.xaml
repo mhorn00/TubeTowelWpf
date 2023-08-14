@@ -5,8 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TubeTowelAppWpf"
         mc:Ignorable="d"
-        Title="HelpWindow" Height="450" Width="800" Closed="aboutWindow_Closed">
+        Title="Help" Height="450" Width="800" Closed="aboutWindow_Closed" ResizeMode="NoResize" Icon="/icon.ico" ShowInTaskbar="False">
     <Grid>
-        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="20"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="20"/>
+        </Grid.RowDefinitions>
     </Grid>
 </Window>

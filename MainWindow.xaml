@@ -32,9 +32,12 @@
         </Grid.ColumnDefinitions>
         <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" FontSize="18">
             <MenuItem Header="_Options" IsTabStop="False">
-                <MenuItem x:Name="resetDbMenuItem" Header="Reset Database" IsTabStop="False" Click="resetDbMenuItem_Click"/>
-                <MenuItem x:Name="checkInAllMenuItem" Header="Check In All Members" IsTabStop="False" Click="checkInAllMenuItem_Click"/>
+                <MenuItem x:Name="emailMenuItem" Header="Set Destination Email" IsTabStop="False" Click="emailMenuItem_Click"/>
+                <MenuItem x:Name="emailPasswordMenuItem" Header="Set Sending Email Password" IsTabStop="False" Click="emailPasswordMenuItem_Click"/>
+                <Separator/>
                 <MenuItem x:Name="closeOutMenuItem" Header="Close Out" IsTabStop="False" Click="closeOutMenuItem_Click"/>
+                <MenuItem x:Name="checkInAllMenuItem" Header="Check In All Members" IsTabStop="False" Click="checkInAllMenuItem_Click"/>
+                <MenuItem x:Name="resetDbMenuItem" Header="Reset Database" IsTabStop="False" Click="resetDbMenuItem_Click"/>
             </MenuItem>
             <MenuItem Header="_Help" IsTabStop="False">
                 <MenuItem x:Name="aboutMenuItem" Header="About" IsTabStop="False" Click="aboutMenuItem_Click"/>

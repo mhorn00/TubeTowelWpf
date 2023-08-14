@@ -5,11 +5,15 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Net;
+using System.Net.Http;
+using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema;
 
@@ -21,8 +25,8 @@ namespace TubeTowelAppWpf {
      * - finish Close out button function
      */
     public partial class MainWindow : Window {
-        private static readonly SolidColorBrush ErrorBrush = new SolidColorBrush(Colors.Red);
-        private static readonly SolidColorBrush StatusBrush = new SolidColorBrush(Colors.Black);
+        internal static readonly SolidColorBrush ErrorBrush = new SolidColorBrush(Colors.Red);
+        internal static readonly SolidColorBrush StatusBrush = new SolidColorBrush(Colors.Black);
         private const string dbSchema = @"{
               'type': 'object',
               'additionalProperties': {
@@ -44,7 +48,8 @@ namespace TubeTowelAppWpf {
             }
         }
         private int listviewID = 0;
-        private readonly String logFile = "log" + DateTime.Now.ToString("MM-dd-yyyy") + ".txt";
+        private static readonly String logFile = "log" + DateTime.Now.ToString("MM-dd-yyyy") + ".txt";
+        private static readonly String date = DateTime.Now.ToString("MM/dd/yyyy");
         internal static AboutWindow aboutWindow { get; set; }
         internal static HelpWindow helpWindow { get; set; }
 
@@ -238,20 +243,21 @@ namespace TubeTowelAppWpf {
             memberTxtBx.Text = "";
             memberTxtBx.Focus();
             memberListView.ItemsSource = ListViewItems;
+            memberListView.ScrollIntoView(memberListView.Items[0]);
             statusLbl.Foreground = StatusBrush;
             statusLbl.Content = checkList[memNum].IsCheckedOut ? "Checked out member " + memNum : "Checked in member " + memNum;
             try {
                 File.WriteAllText("db.json", JsonConvert.SerializeObject(checkList, Newtonsoft.Json.Formatting.Indented));
             } catch (Exception ex) {
                 statusLbl.Foreground = ErrorBrush;
-                statusLbl.Content = "Failed to write to DB!";
+                statusLbl.Content = "Failed to write to the database!";
                 SystemSounds.Beep.Play();
                 log("Failed to write to DB", LogLevel.Error);
                 log(ex.Message, LogLevel.Error);
                 log(ex.StackTrace ?? "No StackTrace avalible", LogLevel.Error);
             }
         }
-        private void closeOutBtn_Click(object sender, RoutedEventArgs e) {
+        private void closeOutBtn_Click(object sender, RoutedEventArgs e) {//aquatics@clubwestside.com
             bool? result = new ConfirmDialog("Are you sure you want to close out?", "This can't be undone.",false).ShowDialog();
             if (result == true) {
                 closedOut = true;
@@ -263,14 +269,51 @@ namespace TubeTowelAppWpf {
                 checkInAllMenuItem.IsEnabled = false;
                 resetDbMenuItem.IsEnabled = false;
                 log("Members who did not check in are:",LogLevel.Info);
+                string emailBody = "The following members did not check in their tubes or towels today:\n";
                 foreach (MemberInfo m in checkList.Values) {
                     if (m.IsCheckedOut) {
                         m.ListID = listviewID++;
+                        emailBody += m.MemberNum + ", ";
                         log($"Member {m.MemberNum}: last checked out at {m.TimeModified} and checked out {m.CheckoutCount}" + (m.CheckoutCount==1?" time.":" times."),LogLevel.Info);
                     }
                 }
+                emailBody.Remove(emailBody.Length-1);
                 log("Finished closeing out.", LogLevel.Info);
                 memberListView.ItemsSource = ListViewItems;
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software\\TubeTowelCheckInOutTool")) {
+                    object k = key.GetValue("email");
+                    object p = key.GetValue("sendpassword");
+                    if (p != null) {
+                        SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587) {
+                            Credentials = new NetworkCredential("westsidetubetowel@gmail.com", p.ToString()),
+                            EnableSsl = true,
+                        };
+                        if (k != null) {
+                            MailMessage mailMessage = new MailMessage("westsidetubetowel@gmail.com", k.ToString(), "Westside Tube Towel Checkout List for " + date, emailBody);
+                            try {
+                                smtp.Send(mailMessage);
+                                log("Close out email sent to " + k.ToString(), LogLevel.Info);
+                                statusLbl.Foreground = StatusBrush;
+                                statusLbl.Content = "Close out email sent!";
+                            } catch (Exception ex) {
+                                log("Exception occured trying to send close out email!", LogLevel.Error);
+                                Exception innerException = ex;
+                                while (innerException != null) {
+                                    log(innerException.GetType().ToString(), LogLevel.Error);
+                                    log(innerException.Message, LogLevel.Error);
+                                    log(innerException.StackTrace ?? "No StackTrace available", LogLevel.Error);
+                                    innerException = innerException.InnerException;
+                                }
+                                statusLbl.Foreground = ErrorBrush;
+                                statusLbl.Content = "Unable to send close out email!";
+                            }
+                        } else {
+                            log("Unable to send close out email as provided email is null!", LogLevel.Error);
+                            statusLbl.Foreground = ErrorBrush;
+                            statusLbl.Content = "Unable to send close out email!";
+                        }
+                    }
+                }
                 if (!Directory.Exists("dbs")) Directory.CreateDirectory("dbs");
                 if (!Directory.Exists("logs")) Directory.CreateDirectory("logs");
                 File.Move("db.json", $"dbs\\db-{DateTime.Now.ToString("MM-dd-yyyy_HH.mm.ss")}.json");
@@ -289,6 +332,20 @@ namespace TubeTowelAppWpf {
                 helpWindow = new HelpWindow();
                 helpWindow.Show();
                 helpWindow.Focus();
+            }
+        }
+        private void emailMenuItem_Click(object sender, RoutedEventArgs e) {
+            bool? result = new TextEntryDialog(this, "Please enter email.","This is the destinaiton to email to after closing out.", "email", true).ShowDialog();
+            if (result == true) {
+                statusLbl.Foreground = StatusBrush;
+                statusLbl.Content = "Updated email.";
+            }
+        }
+        private void emailPasswordMenuItem_Click(object sender, RoutedEventArgs e) {
+            bool? result = new TextEntryDialog(this, "Please enter email password. Do not change unless needed.", "This is the Google App Password to the sending email.", "sendpassword", false).ShowDialog();
+            if (result == true) {
+                statusLbl.Foreground = StatusBrush;
+                statusLbl.Content = "Updated email password.";
             }
         }
         private void closeOutMenuItem_Click(object sender, RoutedEventArgs e) {
@@ -338,7 +395,7 @@ namespace TubeTowelAppWpf {
                 }
             }
         }
-        private void log(string msg, LogLevel lvl) {
+        internal void log(string msg, LogLevel lvl) {
             try {
                 using (FileStream fs = new FileStream(logFile, FileMode.Append, FileAccess.Write)) {
                     using (StreamWriter sw = new StreamWriter(fs)) {
@@ -447,7 +504,7 @@ namespace TubeTowelAppWpf {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
             }
         }
-        internal enum LogLevel {
+        public enum LogLevel {
             Info = 0,
             Warn = 1,
             Error = 2,
