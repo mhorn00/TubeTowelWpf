@@ -20,7 +20,7 @@ namespace TubeTowelAppWpf {
             regkey = rkey;
             fill = fillPrev;
             if (fillPrev) {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software\\TubeTowelCheckInOutTool")) {
+                using (RegistryKey key = Registry.CurrentUser.CreateSubKey("Software\\TubeTowelCheckInOutTool")) {
                     object k = key.GetValue(regkey);
                     if (k != null) {
                         txtBx.Text = k.ToString();
@@ -42,7 +42,9 @@ namespace TubeTowelAppWpf {
                 DialogResult = true;
                 try {
                     using (RegistryKey key = Registry.CurrentUser.CreateSubKey("Software\\TubeTowelCheckInOutTool")) {
-                        key.SetValue(regkey, txtBx.Text.Trim());
+                        if (txtBx.Text.Trim().Length > 0) {
+                            key.SetValue(regkey, txtBx.Text.Trim());
+                        }
                     }
                 } catch (Exception ex) {
                     mwInst.log("Excpetion in writing email to registry!",MainWindow.LogLevel.Error);
