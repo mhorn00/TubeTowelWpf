@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Net;
-using System.Net.Http;
 using System.Net.Mail;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -50,8 +49,6 @@ namespace TubeTowelAppWpf {
         private int listviewID = 0;
         private static readonly String logFile = "log" + DateTime.Now.ToString("MM-dd-yyyy") + ".txt";
         private static readonly String date = DateTime.Now.ToString("MM/dd/yyyy");
-        internal static AboutWindow aboutWindow { get; set; }
-        internal static HelpWindow helpWindow { get; set; }
 
         internal static bool closedOut = false;
 
@@ -294,7 +291,7 @@ namespace TubeTowelAppWpf {
                                 smtp.Send(mailMessage);
                                 log("Close out email sent to " + k.ToString(), LogLevel.Info);
                                 statusLbl.Foreground = StatusBrush;
-                                statusLbl.Content = "Close out email sent!";
+                                statusLbl.Content = "Close out email sent! You can close the program now.";
                             } catch (Exception ex) {
                                 log("Exception occured trying to send close out email!", LogLevel.Error);
                                 Exception innerException = ex;
@@ -305,33 +302,23 @@ namespace TubeTowelAppWpf {
                                     innerException = innerException.InnerException;
                                 }
                                 statusLbl.Foreground = ErrorBrush;
-                                statusLbl.Content = "Unable to send close out email!";
+                                statusLbl.Content = "Unable to send close out email! (Excption occured)";
                             }
                         } else {
                             log("Unable to send close out email as provided email is null!", LogLevel.Error);
                             statusLbl.Foreground = ErrorBrush;
-                            statusLbl.Content = "Unable to send close out email!";
+                            statusLbl.Content = "Unable to send close out email! (No provided email)";
                         }
+                    } else {
+                        log("Unable to send close out email as email password is null!",LogLevel.Error);
+                        statusLbl.Foreground = ErrorBrush;
+                        statusLbl.Content = "Unable to send close out email! (No provided email password)";
                     }
                 }
                 if (!Directory.Exists("dbs")) Directory.CreateDirectory("dbs");
                 if (!Directory.Exists("logs")) Directory.CreateDirectory("logs");
                 File.Move("db.json", $"dbs\\db-{DateTime.Now.ToString("MM-dd-yyyy_HH.mm.ss")}.json");
                 File.Move(logFile, $"logs\\log-{DateTime.Now.ToString("MM-dd-yyyy_HH.mm.ss")}.txt");
-            }
-        }
-        private void aboutMenuItem_Click(object sender, RoutedEventArgs e) {
-            if (aboutWindow == null) {
-                aboutWindow = new AboutWindow();
-                aboutWindow.Show();
-                aboutWindow.Focus();
-            }
-        }
-        private void helpMenuItem_Click(object sender, RoutedEventArgs e) {
-            if (helpWindow == null) {
-                helpWindow = new HelpWindow();
-                helpWindow.Show();
-                helpWindow.Focus();
             }
         }
         private void emailMenuItem_Click(object sender, RoutedEventArgs e) {

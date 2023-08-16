@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TubeTowelAppWpf"
         mc:Ignorable="d"
-        Title="Enter Text" Height="175" Width="325" Closing="textEntryDialog_Closing">
+        Title="Enter Text" Height="175" Width="375" Closing="textEntryDialog_Closing">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="20"/>

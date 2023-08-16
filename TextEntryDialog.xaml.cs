@@ -1,8 +1,5 @@
 ﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Media;
 using System.Text.RegularExpressions;
 using System.Windows;

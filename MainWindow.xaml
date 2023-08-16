@@ -39,11 +39,6 @@
                 <MenuItem x:Name="checkInAllMenuItem" Header="Check In All Members" IsTabStop="False" Click="checkInAllMenuItem_Click"/>
                 <MenuItem x:Name="resetDbMenuItem" Header="Reset Database" IsTabStop="False" Click="resetDbMenuItem_Click"/>
             </MenuItem>
-            <MenuItem Header="_Help" IsTabStop="False">
-                <MenuItem x:Name="aboutMenuItem" Header="About" IsTabStop="False" Click="aboutMenuItem_Click"/>
-                <Separator/>
-                <MenuItem x:Name="helpMenuItem" Header="Help" IsTabStop="False" Click="helpMenuItem_Click"/>
-            </MenuItem>
         </Menu>
         <Label Grid.Row="1" Grid.Column="1" Content="Tube n' Towel" VerticalAlignment="Center" FontSize="80" FontFamily="Segoe UI Semilight" Margin="20,0,0,0" Padding="5,0,5,0"/>
         <Label Grid.Row="2" Grid.Column="1" Content="Check In/Out Tool V2" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="65" Margin="144,0,0,0" FontFamily="Segoe UI Semilight" Padding="5,0,5,0"/>
